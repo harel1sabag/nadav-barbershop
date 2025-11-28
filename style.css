@@ -11,6 +11,10 @@ body {
     min-height: 100vh;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .site-header {
     text-align: center;
     padding: 2.5rem 1rem 1.5rem;
@@ -29,10 +33,64 @@ body {
     color: #9ca3af;
 }
 
+.auth-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, rgba(37, 99, 235, 0.2), rgba(15, 23, 42, 0.95));
+    z-index: 50;
+}
+
+.auth-card {
+    background: rgba(15, 23, 42, 0.98);
+    border-radius: 1rem;
+    padding: 2rem 2.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    text-align: center;
+    max-width: 360px;
+    width: 100%;
+}
+
+.auth-card h2 {
+    margin-bottom: 0.75rem;
+}
+
+.auth-card p {
+    margin-bottom: 1rem;
+}
+
 .container {
     max-width: 900px;
     margin: 0 auto;
     padding: 1.5rem 1rem 3rem;
+}
+
+.user-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid rgba(148, 163, 184, 0.7);
+}
+
+.user-name {
+    font-size: 0.95rem;
 }
 
 .intro {
@@ -68,6 +126,21 @@ body {
     margin-bottom: 1rem;
 }
 
+.auth-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.secondary-btn {
+    background: transparent;
+    border: 1px solid rgba(148, 163, 184, 0.7);
+    color: #e5e7eb;
+}
+
 .appointment-form .form-row {
     margin-bottom: 1rem;
 }
@@ -88,6 +161,80 @@ body {
     background: rgba(15, 23, 42, 0.9);
     color: #e5e7eb;
     font-size: 0.95rem;
+}
+
+.date-boxes {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.date-box {
+    width: 80px;
+    padding: 0.4rem 0.2rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.9);
+    color: #e5e7eb;
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+}
+
+.date-box-day {
+    color: #9ca3af;
+    font-size: 0.78rem;
+}
+
+.date-box-date {
+    font-weight: 600;
+}
+
+.date-box:hover {
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+}
+
+.date-box.selected {
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    border-color: transparent;
+}
+
+.time-boxes {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.time-box {
+    width: 70px;
+    padding: 0.45rem 0.2rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.9);
+    color: #e5e7eb;
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.85rem;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+}
+
+.time-box:hover {
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+}
+
+.time-box.selected {
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    border-color: transparent;
 }
 
 .appointment-form input:focus,
