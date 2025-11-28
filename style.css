@@ -1,0 +1,228 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0f172a;
+    color: #e5e7eb;
+    min-height: 100vh;
+}
+
+.site-header {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    background: linear-gradient(135deg, #1e293b, #0f172a 60%, #1d4ed8);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.site-title {
+    font-size: 2.25rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+}
+
+.site-subtitle {
+    font-size: 1rem;
+    color: #9ca3af;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+}
+
+.intro {
+    margin-bottom: 1.75rem;
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.intro h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.intro p {
+    color: #cbd5f5;
+    line-height: 1.6;
+}
+
+.appointment-section,
+.appointments-list-section {
+    margin-bottom: 1.75rem;
+    background: rgba(15, 23, 42, 0.9);
+    border-radius: 1rem;
+    padding: 1.5rem 1.5rem 1.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.appointment-section h2,
+.appointments-list-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.appointment-form .form-row {
+    margin-bottom: 1rem;
+}
+
+.appointment-form label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.92rem;
+}
+
+.appointment-form input,
+.appointment-form select,
+.appointment-form textarea {
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.9);
+    color: #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.appointment-form input:focus,
+.appointment-form select:focus,
+.appointment-form textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
+}
+
+.two-columns {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.two-columns > div {
+    flex: 1;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.primary-btn {
+    border: none;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: white;
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+}
+
+.primary-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+}
+
+.primary-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.form-message {
+    font-size: 0.9rem;
+}
+
+.form-message.success {
+    color: #4ade80;
+}
+
+.form-message.error {
+    color: #f97373;
+}
+
+.muted-text {
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+.appointments-list {
+    list-style: none;
+    margin-top: 0.5rem;
+}
+
+.appointment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.75rem;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    margin-bottom: 0.5rem;
+    gap: 0.75rem;
+}
+
+.appointment-main {
+    flex: 1;
+}
+
+.appointment-main strong {
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.appointment-meta {
+    font-size: 0.86rem;
+    color: #9ca3af;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(37, 99, 235, 0.5);
+    color: #bfdbfe;
+}
+
+.delete-btn {
+    border: none;
+    background: transparent;
+    color: #f97373;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.site-footer {
+    text-align: center;
+    padding: 1rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.4);
+    color: #9ca3af;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding-inline: 0.75rem;
+    }
+
+    .appointment-section,
+    .appointments-list-section,
+    .intro {
+        padding-inline: 1rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

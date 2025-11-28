@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>קביעת תורים לניקוי ותספורת</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header class="site-header">
+        <h1 class="site-title">מספרת נדב</h1>
+        <p class="site-subtitle">קביעת תורים אונליין לתספורת וגילוח</p>
+    </header>
+
+    <main class="container">
+        <section class="intro">
+            <h2>ברוך הבא</h2>
+            <p>
+                כאן תוכל לקבוע תור לתספורת בזמן שנוח לך.
+                ממלאים פרטים קצרים, בוחרים תאריך ושעה – ומגיעים מסודרים.
+            </p>
+        </section>
+
+        <section class="appointment-section">
+            <h2>קבע תור חדש</h2>
+            <form id="appointment-form" class="appointment-form">
+                <div class="form-row">
+                    <label for="fullName">שם מלא</label>
+                    <input type="text" id="fullName" name="fullName" required />
+                </div>
+
+                <div class="form-row">
+                    <label for="phone">טלפון</label>
+                    <input type="tel" id="phone" name="phone" required placeholder="05x-xxxxxxx" />
+                </div>
+
+                <div class="form-row two-columns">
+                    <div>
+                        <label for="date">תאריך</label>
+                        <input type="date" id="date" name="date" required />
+                    </div>
+                    <div>
+                        <label for="time">שעה</label>
+                        <input type="time" id="time" name="time" required />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label for="service">סוג תספורת</label>
+                    <select id="service" name="service" required>
+                        <option value="">בחר סוג שירות</option>
+                        <option value="haircut">תספורת</option>
+                        <option value="beard">עיצוב זקן</option>
+                        <option value="both">תספורת + זקן</option>
+                        <option value="child">תספורת ילדים</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="notes">הערות (לא חובה)</label>
+                    <textarea id="notes" name="notes" rows="2" placeholder="לדוגמה: להימנע ממכונה, עדינה בצדדים..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="primary-btn">שמור תור</button>
+                    <p id="form-message" class="form-message" aria-live="polite"></p>
+                </div>
+            </form>
+        </section>
+
+        <section class="appointments-list-section">
+            <h2>התורים שלך</h2>
+            <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
+            <ul id="appointments-list" class="appointments-list"></ul>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <small>© <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
