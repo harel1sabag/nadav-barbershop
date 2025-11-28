@@ -26,6 +26,7 @@ const userBar = document.getElementById("user-bar");
 const userNameEl = document.getElementById("user-name");
 const userAvatarEl = document.getElementById("user-avatar");
 const logoutBtn = document.getElementById("logout-btn");
+const appointmentsTitle = document.getElementById("appointments-title");
 
 // שנה נוכחית בפוטר
 if (currentYearSpan) {
@@ -49,6 +50,7 @@ if (logoutBtn) {
 let selectedDate = null;
 let selectedTime = null;
 let currentUser = null;
+let isAdmin = false;
 
 function formatIsoDate(dateObj) {
     const year = dateObj.getFullYear();
@@ -159,10 +161,15 @@ let appointments = [];
 function setAuthStatusText() {
     if (!authStatus) return;
     if (currentUser) {
+        isAdmin = currentUser.email === "sabag1715@gmail.com";
         authStatus.textContent = `מחובר כ- ${currentUser.displayName || currentUser.email}`;
         if (authOverlay) authOverlay.classList.add("hidden");
         if (mainContent) mainContent.classList.remove("hidden");
         if (userBar) userBar.classList.remove("hidden");
+
+        if (appointmentsTitle) {
+            appointmentsTitle.textContent = isAdmin ? "כל התורים (אדמין)" : "התורים שלך";
+        }
 
         if (userNameEl) {
             userNameEl.textContent = currentUser.displayName || currentUser.email || "משתמש";
@@ -180,6 +187,7 @@ function setAuthStatusText() {
         if (authOverlay) authOverlay.classList.remove("hidden");
         if (mainContent) mainContent.classList.add("hidden");
         if (userBar) userBar.classList.add("hidden");
+        isAdmin = false;
     }
 }
 
@@ -198,8 +206,15 @@ function saveUserToFirestore(user) {
 }
 
 function loadAppointmentsFromFirestore() {
+    if (!currentUser) {
+        appointments = [];
+        renderAppointments();
+        return Promise.resolve();
+    }
+
     return db
         .collection("appointments")
+        .where("userId", "==", currentUser.uid)
         .orderBy("date")
         .orderBy("time")
         .get()
@@ -213,6 +228,7 @@ function loadAppointmentsFromFirestore() {
                     date: data.date,
                     time: data.time,
                     displayDate: formatDisplayDate(data.date),
+                    userId: data.userId,
                 };
             });
             renderAppointments();
@@ -226,14 +242,18 @@ function loadAppointmentsFromFirestore() {
 function renderAppointments() {
     appointmentsList.innerHTML = "";
 
-    if (appointments.length === 0) {
+    const visibleAppointments = isAdmin
+        ? appointments
+        : appointments.filter((appt) => appt.userId === (currentUser && currentUser.uid));
+
+    if (visibleAppointments.length === 0) {
         noAppointments.style.display = "block";
         return;
     }
 
     noAppointments.style.display = "none";
 
-    appointments.forEach((appt, index) => {
+    visibleAppointments.forEach((appt, index) => {
         const li = document.createElement("li");
         li.className = "appointment-item";
 
@@ -261,8 +281,27 @@ function renderAppointments() {
         deleteBtn.textContent = "מחק";
         deleteBtn.className = "delete-btn";
         deleteBtn.addEventListener("click", () => {
-            appointments.splice(index, 1);
-            renderAppointments();
+            if (!confirm("האם אתה בטוח שברצונך למחוק את התור?")) return;
+
+            const apptId = appt.id;
+            if (apptId) {
+                db.collection("appointments")
+                    .doc(apptId)
+                    .delete()
+                    .then(() => {
+                        appointments.splice(index, 1);
+                        renderAppointments();
+                        showMessage("התור נמחק בהצלחה", "success");
+                    })
+                    .catch((error) => {
+                        console.error("Error removing document: ", error);
+                        showMessage("שגיאה במחיקת התור", "error");
+                    });
+            } else {
+                // Fallback for local-only appointments (shouldn't happen usually)
+                appointments.splice(index, 1);
+                renderAppointments();
+            }
         });
 
         actionsDiv.appendChild(serviceBadge);
@@ -369,11 +408,15 @@ auth.onAuthStateChanged((user) => {
     currentUser = user || null;
     setAuthStatusText();
     if (currentUser) {
+        isAdmin = currentUser.email === "admin@example.com"; // add this line
         saveUserToFirestore(currentUser);
+        loadAppointmentsFromFirestore();
+    } else {
+        appointments = [];
+        renderAppointments();
     }
 });
 
-// אתחול בחירת תאריך (ריבועים) ושעה (ריבועים) וטעינת תורים מה-DB
+// אתחול בחירת תאריך (ריבועים) ושעה (ריבועים)
 initializeDateSelection();
 initializeTimeSelection();
-loadAppointmentsFromFirestore();

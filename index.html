@@ -70,108 +70,24 @@
             </section>
 
             <section class="appointments-list-section">
-                <h2>התורים שלך</h2>
+                <h2 id="appointments-title">התורים שלך</h2>
                 <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
                 <ul id="appointments-list" class="appointments-list"></ul>
             </section>
         </main>
 
         <footer class="site-footer">
+            <small>  <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
             <small>© <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
         </footer>
     </div>
 
-    <script src="app.js"></script>
-</body>
-
-</html>
-<html lang="he" dir="rtl">
-
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>קביעת תורים לניקוי ותספורת</title>
-    <link rel="stylesheet" href="style.css" />
-</head>
-
-<body>
-    <header class="site-header">
-        <h1 class="site-title">מספרת נדב</h1>
-        <p class="site-subtitle">קביעת תורים אונליין לתספורת וגילוח</p>
-    </header>
-
-    <div id="auth-overlay" class="auth-overlay">
-        <div class="auth-card">
-            <h2>התחברות</h2>
-            <p class="muted-text">כדי לקבוע תור, יש להתחבר עם חשבון Google.</p>
-            <button type="button" id="google-signin-btn" class="primary-btn">התחבר עם Google</button>
-            <span id="auth-status" class="muted-text">לא מחובר</span>
-        </div>
-    </div>
-
-    <main class="container hidden" id="main-content">
-        <div class="user-bar" id="user-bar">
-            <div class="user-info">
-                <img id="user-avatar" class="user-avatar" alt="תמונת משתמש" />
-                <span id="user-name" class="user-name"></span>
-            </div>
-            <button type="button" id="logout-btn" class="secondary-btn">התנתק</button>
-        </div>
-
-        <section class="intro">
-            <h2>ברוך הבא</h2>
-            <p>
-                כאן תוכל לקבוע תור לתספורת בזמן שנוח לך.
-                ממלאים פרטים קצרים, בוחרים תאריך ושעה – ומגיעים מסודרים.
-            </p>
-        </section>
-
-        <section class="appointment-section">
-            <h2>קבע תור חדש</h2>
-            <form id="appointment-form" class="appointment-form">
-                <div class="form-row">
-                    <label for="fullName">שם מלא</label>
-                    <input type="text" id="fullName" name="fullName" required />
-                </div>
-
-                <div class="form-row">
-                    <label for="phone">טלפון</label>
-                    <input type="tel" id="phone" name="phone" required placeholder="05x-xxxxxxx" />
-                </div>
-
-                <div class="form-row">
-                    <label for="date">תאריך</label>
-                    <div class="date-boxes" id="date-boxes"></div>
-                    <input type="hidden" id="selectedDate" name="date" />
-                </div>
-
-                <div class="form-row">
-                    <label for="time">שעה</label>
-                    <div class="time-boxes" id="time-boxes"></div>
-                    <input type="hidden" id="selectedTime" name="time" />
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="primary-btn">שמור תור</button>
-                    <p id="form-message" class="form-message" aria-live="polite"></p>
-                </div>
-            </form>
-        </section>
-
-        <section class="appointments-list-section">
-            <h2>התורים שלך</h2>
-            <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
-            <ul id="appointments-list" class="appointments-list"></ul>
-        </section>
-    </main>
-
-    <footer class="site-footer">
-        <small>© <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
-    </footer>
-
+    <!-- Firebase SDKs - MUST load before app.js -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- Your app code -->
     <script src="app.js"></script>
 </body>
 
