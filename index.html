@@ -36,12 +36,7 @@
         </header>
 
         <main class="container">
-            <section class="intro">
-                <h2>ברוך הבא</h2>
-                <p>כאן תוכל לקבוע תור לתספורת בזמן שנוח לך. ממלאים פרטים קצרים, בוחרים תאריך ושעה – ומגיעים מסודרים.</p>
-            </section>
-
-            <section class="appointment-section">
+            <section class="appointment-section" id="new-appointment-section">
                 <h2>קבע תור חדש</h2>
                 <form id="appointment-form" class="appointment-form">
                     <div class="form-row">
@@ -70,9 +65,26 @@
             </section>
 
             <section class="appointments-list-section">
-                <h2 id="appointments-title">התורים שלך</h2>
+                <div class="appointments-header">
+                    <h2 id="appointments-title">התורים שלך</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" id="seed-demo-btn" class="secondary-btn hidden">צור תורי דמו</button>
+                        <button type="button" id="delete-all-btn" class="secondary-btn hidden">מחק את כל התורים</button>
+                    </div>
+                </div>
                 <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
-                <ul id="appointments-list" class="appointments-list"></ul>
+                <table id="appointments-list" class="appointments-table">
+                    <thead>
+                        <tr>
+                            <th>תאריך</th>
+                            <th>שעה</th>
+                            <th>שם</th>
+                            <th>טלפון</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </section>
         </main>
 
