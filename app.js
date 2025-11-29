@@ -16,6 +16,8 @@ const auth = firebase.auth();
 const appointmentForm = document.getElementById("appointment-form");
 const formMessage = document.getElementById("form-message");
 const appointmentsList = document.getElementById("appointments-list");
+const appointmentsCompletedList = document.getElementById("appointments-completed-list");
+const completedAppointmentsTitle = document.getElementById("completed-appointments-title");
 const noAppointments = document.getElementById("no-appointments");
 const currentYearSpan = document.getElementById("current-year");
 const authStatus = document.getElementById("auth-status");
@@ -31,6 +33,7 @@ const newAppointmentSection = document.getElementById("new-appointment-section")
 const seedDemoBtn = document.getElementById("seed-demo-btn");
 const deleteAllBtn = document.getElementById("delete-all-btn");
 const userSingleAppointment = document.getElementById("user-single-appointment");
+const userHistoryEl = document.getElementById("user-history");
 const confirmDialog = document.getElementById("confirm-dialog");
 const confirmMessageEl = document.getElementById("confirm-message");
 const confirmOkBtn = document.getElementById("confirm-ok-btn");
@@ -75,7 +78,7 @@ function handleDeleteAllAppointments() {
         alert("רק אדמין יכול לבטל את כל התורים");
         return;
     }
-    openConfirm("האם אתה בטוח שברצונך לבטל את כל התורים?", () => {
+    openConfirm("האם אתה בטוח שברצונך לבטל את כל התורים שלא בוצעו?", () => {
         db.collection("appointments")
             .get()
             .then((snapshot) => {
@@ -84,15 +87,21 @@ function handleDeleteAllAppointments() {
                 }
 
                 const batch = db.batch();
+
                 snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // משאירים תורים שבוצעו (status === "completed"), מוחקים רק תורים שלא בוצעו
+                    if (data && data.status === "completed") {
+                        return;
+                    }
                     batch.delete(doc.ref);
                 });
 
                 return batch.commit();
             })
             .then(() => {
-                appointments = [];
-                renderAppointments();
+                // נטען מחדש את התורים כדי לעדכן את שתי הטבלאות
+                loadAppointmentsFromFirestore();
             })
             .catch((error) => {
                 console.error("Error deleting all appointments:", error);
@@ -233,6 +242,40 @@ function formatDisplayDate(isoStr) {
 function getHebrewDayNameShort(index) {
     const days = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
     return days[index] || "";
+}
+
+function appointmentToDate(appt) {
+    // appt.date בפורמט YYYY-MM-DD, appt.time בפורמט HH:MM
+    const [yearStr, monthStr, dayStr] = appt.date.split("-");
+    const [hourStr, minuteStr] = (appt.time || "00:00").split(":");
+    return new Date(
+        parseInt(yearStr, 10),
+        parseInt(monthStr, 10) - 1,
+        parseInt(dayStr, 10),
+        parseInt(hourStr, 10),
+        parseInt(minuteStr, 10)
+    );
+}
+
+function formatTimeDiff(fromDate, toDate) {
+    const diffMs = toDate - fromDate;
+    if (diffMs < 0) return "בעתיד";
+
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+
+    if (days > 0 && hours > 0) {
+        return `לפני ${days} ימים ו-${hours} שעות`;
+    }
+    if (days > 0) {
+        return days === 1 ? "לפני יום" : `לפני ${days} ימים`;
+    }
+    if (hours > 0) {
+        return hours === 1 ? "לפני שעה" : `לפני ${hours} שעות`;
+    }
+    return "לפני פחות משעה";
 }
 
 function initializeDateSelection() {
@@ -469,6 +512,22 @@ function loadAppointmentsFromFirestore() {
 
     appointmentsUnsubscribe = query.onSnapshot(
         (snapshot) => {
+            const now = new Date();
+
+            // עדכון סטטוס בתורים שעבר זמנם (30 דקות אחרי תחילת התור) ל"completed" (בוצע)
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                if (!data || !data.date || !data.time) return;
+
+                const startDate = appointmentToDate({ date: data.date, time: data.time });
+                const endDate = new Date(startDate.getTime() + 30 * 60000); // חצי שעה אחרי תחילת התור
+                if (endDate < now && data.status !== "completed") {
+                    doc.ref.update({ status: "completed" }).catch((error) => {
+                        console.error("Error updating appointment status:", error);
+                    });
+                }
+            });
+
             appointments = snapshot.docs.map((doc) => {
                 const data = doc.data();
                 return {
@@ -479,6 +538,7 @@ function loadAppointmentsFromFirestore() {
                     time: data.time,
                     displayDate: formatDisplayDate(data.date),
                     userId: data.userId,
+                    status: data.status || null,
                 };
             });
             renderAppointments();
@@ -495,7 +555,12 @@ function renderAppointments() {
 
     const visibleAppointments = isAdmin
         ? appointments
-        : appointments.filter((appt) => appt.userId === (currentUser && currentUser.uid));
+        : // למשתמש רגיל מציגים רק תורים שלא סומנו כ"בוצע"
+          appointments.filter(
+              (appt) =>
+                  appt.userId === (currentUser && currentUser.uid) &&
+                  appt.status !== "completed"
+          );
 
     // למשתמש רגיל: אם יש כבר תור אחד לפחות – להסתיר את סקשן "קבע תור חדש"
     if (!isAdmin && newAppointmentSection) {
@@ -517,6 +582,11 @@ function renderAppointments() {
             const tbodyEmpty = appointmentsList.tBodies && appointmentsList.tBodies[0];
             if (tbodyEmpty) tbodyEmpty.innerHTML = "";
             appointmentsList.style.display = "none";
+
+            // בלי תור פעיל, היסטוריה עדיין יכולה להופיע
+            if (userHistoryEl) {
+                renderUserHistory();
+            }
             return;
         }
 
@@ -564,6 +634,11 @@ function renderAppointments() {
             }
         }
 
+        // היסטוריית תורים קודמים
+        if (userHistoryEl) {
+            renderUserHistory(appt);
+        }
+
         return;
     }
 
@@ -572,22 +647,29 @@ function renderAppointments() {
         userSingleAppointment.classList.add("hidden");
         userSingleAppointment.innerHTML = "";
     }
+    if (userHistoryEl) {
+        userHistoryEl.classList.add("hidden");
+        userHistoryEl.innerHTML = "";
+    }
     appointmentsList.style.display = "table";
 
-    if (visibleAppointments.length === 0) {
-        if (noAppointments) noAppointments.style.display = "block";
-        const tbodyEmpty = appointmentsList.tBodies && appointmentsList.tBodies[0];
-        if (tbodyEmpty) tbodyEmpty.innerHTML = "";
-        return;
-    }
+    const activeAppointments = appointments.filter((a) => a.status !== "completed");
+    const completedAppointments = appointments.filter((a) => a.status === "completed");
 
-    if (noAppointments) noAppointments.style.display = "none";
+    if (activeAppointments.length === 0) {
+        if (noAppointments) noAppointments.style.display = "block";
+    } else {
+        if (noAppointments) noAppointments.style.display = "none";
+    }
 
     const tbody = appointmentsList.tBodies[0] || appointmentsList.createTBody();
     tbody.innerHTML = "";
 
-    visibleAppointments.forEach((appt, index) => {
+    activeAppointments.forEach((appt, index) => {
         const tr = document.createElement("tr");
+
+        const nameTd = document.createElement("td");
+        nameTd.textContent = appt.fullName;
 
         const dateTd = document.createElement("td");
         dateTd.textContent = appt.displayDate;
@@ -595,13 +677,12 @@ function renderAppointments() {
         const timeTd = document.createElement("td");
         timeTd.textContent = appt.time;
 
-        const nameTd = document.createElement("td");
-        nameTd.textContent = appt.fullName;
-
         const phoneTd = document.createElement("td");
         phoneTd.textContent = appt.phone;
 
         const actionsTd = document.createElement("td");
+
+        // כפתור ביטול תור
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
         deleteBtn.textContent = "ביטול";
@@ -639,14 +720,150 @@ function renderAppointments() {
 
         actionsTd.appendChild(deleteBtn);
 
+        // כפתור "בוצע" לאדמין בלבד – סימון תור כבוצע
+        if (isAdmin) {
+            const completeBtn = document.createElement("button");
+            completeBtn.type = "button";
+            completeBtn.textContent = appt.status === "completed" ? "בוצע" : "סמן כבוצע";
+            completeBtn.className = "secondary-btn";
+
+            if (appt.status === "completed") {
+                completeBtn.disabled = true;
+            } else {
+                completeBtn.addEventListener("click", () => {
+                    const apptId = appt.id;
+                    if (!apptId) return;
+
+                    db.collection("appointments")
+                        .doc(apptId)
+                        .update({ status: "completed" })
+                        .then(() => {
+                            appointments = appointments.map((a) =>
+                                a.id === apptId ? { ...a, status: "completed" } : a
+                            );
+                            renderAppointments();
+                            showMessage("התור סומן כבוצע", "success");
+                        })
+                        .catch((error) => {
+                            console.error("Error marking appointment as completed:", error);
+                            showMessage("שגיאה בסימון התור כבוצע", "error");
+                        });
+                });
+            }
+
+            actionsTd.appendChild(completeBtn);
+        }
+
+        tr.appendChild(nameTd);
         tr.appendChild(dateTd);
         tr.appendChild(timeTd);
-        tr.appendChild(nameTd);
         tr.appendChild(phoneTd);
         tr.appendChild(actionsTd);
 
         tbody.appendChild(tr);
     });
+
+    // רינדור טבלת התורים שבוצעו (אדמין בלבד)
+    if (appointmentsCompletedList && completedAppointmentsTitle) {
+        const completedTbody = appointmentsCompletedList.tBodies[0] || appointmentsCompletedList.createTBody();
+        completedTbody.innerHTML = "";
+
+        if (completedAppointments.length === 0) {
+            appointmentsCompletedList.style.display = "none";
+            completedAppointmentsTitle.style.display = "none";
+        } else {
+            appointmentsCompletedList.style.display = "table";
+            completedAppointmentsTitle.style.display = "block";
+
+            completedAppointments.forEach((appt) => {
+                const tr = document.createElement("tr");
+
+                const nameTd = document.createElement("td");
+                nameTd.textContent = appt.fullName;
+
+                const dateTd = document.createElement("td");
+                dateTd.textContent = appt.displayDate;
+
+                const timeTd = document.createElement("td");
+                timeTd.textContent = appt.time;
+
+                const phoneTd = document.createElement("td");
+                phoneTd.textContent = appt.phone;
+
+                const actionsTd = document.createElement("td");
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.type = "button";
+                deleteBtn.textContent = "מחק";
+                deleteBtn.className = "delete-btn";
+                deleteBtn.addEventListener("click", () => {
+                    const apptId = appt.id;
+                    if (!apptId) return;
+
+                    db.collection("appointments")
+                        .doc(apptId)
+                        .delete()
+                        .then(() => {
+                            appointments = appointments.filter((a) => a.id !== apptId);
+                            renderAppointments();
+                            showMessage("התור בוטל בהצלחה", "success");
+                        })
+                        .catch((error) => {
+                            console.error("Error removing document: ", error);
+                            showMessage("שגיאה בביטול התור", "error");
+                        });
+                });
+
+                actionsTd.appendChild(deleteBtn);
+
+                tr.appendChild(nameTd);
+                tr.appendChild(dateTd);
+                tr.appendChild(timeTd);
+                tr.appendChild(phoneTd);
+                tr.appendChild(actionsTd);
+
+                completedTbody.appendChild(tr);
+            });
+        }
+    }
+}
+
+function renderUserHistory(currentActiveAppt = null) {
+    if (!userHistoryEl || !currentUser) return;
+
+    const now = new Date();
+
+    const pastAppointments = appointments
+        .filter((a) => a.userId === currentUser.uid)
+        // משתמשים בסטטוס: רק תורים שסומנו כ"completed" נחשבים היסטוריה
+        .filter((a) => a.status === "completed")
+        .sort((a, b) => appointmentToDate(b) - appointmentToDate(a));
+
+    const lastThree = pastAppointments.slice(0, 3);
+
+    if (lastThree.length === 0) {
+        userHistoryEl.classList.add("hidden");
+        userHistoryEl.innerHTML = "";
+        return;
+    }
+
+    userHistoryEl.classList.remove("hidden");
+
+    const itemsHtml = lastThree
+        .map((a) => {
+            const d = appointmentToDate(a);
+            const diffText = formatTimeDiff(d, now);
+            const dateText = formatDisplayDate(a.date);
+            return `<li>${dateText} בשעה ${a.time} – ${diffText}</li>`;
+        })
+        .join("");
+
+    userHistoryEl.innerHTML = `
+        <div class="history-title">תורים קודמים שלך</div>
+        <ul class="history-list">
+            ${itemsHtml}
+        </ul>
+    `;
 }
 
 function showMessage(text, type = "success") {
@@ -693,7 +910,9 @@ appointmentForm.addEventListener("submit", (event) => {
 
     // הגבלה: לכל משתמש רגיל מותר רק תור אחד במערכת
     if (!isAdmin) {
-        const userHasAppointment = appointments.some((a) => a.userId === currentUser.uid);
+        const userHasAppointment = appointments.some(
+            (a) => a.userId === currentUser.uid && a.status !== "completed"
+        );
         if (userHasAppointment) {
             showMessage("יש לך כבר תור אחד במערכת. כדי לקבוע תור חדש, בטל קודם את התור הקיים.", "error");
             return;
@@ -712,6 +931,7 @@ appointmentForm.addEventListener("submit", (event) => {
         time,
         userId: currentUser.uid,
         userEmail: currentUser.email || "",
+        status: "scheduled",
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
 

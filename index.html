@@ -74,12 +74,28 @@
                 </div>
                 <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
                 <div id="user-single-appointment" class="single-appointment-card hidden"></div>
+                <div id="user-history" class="history-card hidden"></div>
                 <table id="appointments-list" class="appointments-table">
                     <thead>
                         <tr>
+                            <th>שם</th>
                             <th>תאריך</th>
                             <th>שעה</th>
+                            <th>טלפון</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <!-- טבלה נפרדת לתורים שבוצעו (מיועדת לאדמין) -->
+                <h3 id="completed-appointments-title" class="muted-text" style="margin-top: 1rem; display: none;">תורים שבוצעו</h3>
+                <table id="appointments-completed-list" class="appointments-table" style="display: none;">
+                    <thead>
+                        <tr>
                             <th>שם</th>
+                            <th>תאריך</th>
+                            <th>שעה</th>
                             <th>טלפון</th>
                             <th>פעולות</th>
                         </tr>
