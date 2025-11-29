@@ -30,6 +30,11 @@ const appointmentsTitle = document.getElementById("appointments-title");
 const newAppointmentSection = document.getElementById("new-appointment-section");
 const seedDemoBtn = document.getElementById("seed-demo-btn");
 const deleteAllBtn = document.getElementById("delete-all-btn");
+const userSingleAppointment = document.getElementById("user-single-appointment");
+const confirmDialog = document.getElementById("confirm-dialog");
+const confirmMessageEl = document.getElementById("confirm-message");
+const confirmOkBtn = document.getElementById("confirm-ok-btn");
+const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
 
 // שנה נוכחית בפוטר
 if (currentYearSpan) {
@@ -67,31 +72,33 @@ function startAvailabilityListener() {
 
 function handleDeleteAllAppointments() {
     if (!isAdmin) {
-        alert("רק אדמין יכול למחוק את כל התורים");
+        alert("רק אדמין יכול לבטל את כל התורים");
         return;
     }
-    db.collection("appointments")
-        .get()
-        .then((snapshot) => {
-            if (snapshot.empty) {
-                return;
-            }
+    openConfirm("האם אתה בטוח שברצונך לבטל את כל התורים?", () => {
+        db.collection("appointments")
+            .get()
+            .then((snapshot) => {
+                if (snapshot.empty) {
+                    return;
+                }
 
-            const batch = db.batch();
-            snapshot.forEach((doc) => {
-                batch.delete(doc.ref);
+                const batch = db.batch();
+                snapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+
+                return batch.commit();
+            })
+            .then(() => {
+                appointments = [];
+                renderAppointments();
+            })
+            .catch((error) => {
+                console.error("Error deleting all appointments:", error);
+                alert("שגיאה בביטול כל התורים: " + (error && error.message ? error.message : ""));
             });
-
-            return batch.commit();
-        })
-        .then(() => {
-            appointments = [];
-            renderAppointments();
-        })
-        .catch((error) => {
-            console.error("Error deleting all appointments:", error);
-            alert("שגיאה במחיקת כל התורים: " + (error && error.message ? error.message : ""));
-        });
+    });
 }
 
 if (deleteAllBtn) {
@@ -176,6 +183,40 @@ let isAdmin = false;
 let appointmentsUnsubscribe = null;
 let availabilityUnsubscribe = null;
 let allAppointmentsForAvailability = [];
+let pendingConfirmAction = null;
+
+function openConfirm(message, onConfirm) {
+    if (!confirmDialog || !confirmMessageEl || !confirmOkBtn || !confirmCancelBtn) {
+        // fallback אם משום מה הדיאלוג לא קיים
+        if (window.confirm(message)) {
+            onConfirm();
+        }
+        return;
+    }
+
+    confirmMessageEl.textContent = message;
+    pendingConfirmAction = onConfirm;
+    confirmDialog.classList.remove("hidden");
+
+    const handleOk = () => {
+        confirmDialog.classList.add("hidden");
+        confirmOkBtn.removeEventListener("click", handleOk);
+        confirmCancelBtn.removeEventListener("click", handleCancel);
+        const action = pendingConfirmAction;
+        pendingConfirmAction = null;
+        if (action) action();
+    };
+
+    const handleCancel = () => {
+        confirmDialog.classList.add("hidden");
+        confirmOkBtn.removeEventListener("click", handleOk);
+        confirmCancelBtn.removeEventListener("click", handleCancel);
+        pendingConfirmAction = null;
+    };
+
+    confirmOkBtn.addEventListener("click", handleOk);
+    confirmCancelBtn.addEventListener("click", handleCancel);
+}
 
 function formatIsoDate(dateObj) {
     const year = dateObj.getFullYear();
@@ -331,7 +372,7 @@ function setAuthStatusText() {
         if (userBar) userBar.classList.remove("hidden");
 
         if (appointmentsTitle) {
-            appointmentsTitle.textContent = isAdmin ? "כל התורים (אדמין)" : "התורים שלך";
+            appointmentsTitle.textContent = isAdmin ? "כל התורים (אדמין)" : "התור שלך";
         }
 
         if (seedDemoBtn) {
@@ -456,6 +497,83 @@ function renderAppointments() {
         ? appointments
         : appointments.filter((appt) => appt.userId === (currentUser && currentUser.uid));
 
+    // למשתמש רגיל: אם יש כבר תור אחד לפחות – להסתיר את סקשן "קבע תור חדש"
+    if (!isAdmin && newAppointmentSection) {
+        if (currentUser && visibleAppointments.length > 0) {
+            newAppointmentSection.classList.add("hidden");
+        } else {
+            newAppointmentSection.classList.remove("hidden");
+        }
+    }
+
+    // תצוגה שונה למשתמש רגיל: כרטיס יחיד במקום טבלה
+    if (!isAdmin && currentUser) {
+        if (visibleAppointments.length === 0) {
+            if (noAppointments) noAppointments.style.display = "block";
+            if (userSingleAppointment) {
+                userSingleAppointment.classList.add("hidden");
+                userSingleAppointment.innerHTML = "";
+            }
+            const tbodyEmpty = appointmentsList.tBodies && appointmentsList.tBodies[0];
+            if (tbodyEmpty) tbodyEmpty.innerHTML = "";
+            appointmentsList.style.display = "none";
+            return;
+        }
+
+        if (noAppointments) noAppointments.style.display = "none";
+        appointmentsList.style.display = "none";
+
+        const appt = visibleAppointments[0];
+
+        // חישוב שם היום לפי התאריך של התור
+        const [yearStr, monthStr, dayStr] = appt.date.split("-");
+        const apptDateObj = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, parseInt(dayStr, 10));
+        const apptDayName = getHebrewDayNameShort(apptDateObj.getDay());
+
+        if (userSingleAppointment) {
+            userSingleAppointment.classList.remove("hidden");
+            userSingleAppointment.innerHTML = `
+                <div class="single-appointment-main">
+                    <strong>התור שלך ליום ${apptDayName} ${appt.displayDate} בשעה ${appt.time}</strong>
+                    <div class="single-appointment-meta">שם: ${appt.fullName} · טלפון: ${appt.phone}</div>
+                </div>
+                <button type="button" class="delete-btn" id="cancel-single-appointment-btn">בטל תור</button>
+            `;
+
+            const cancelBtn = document.getElementById("cancel-single-appointment-btn");
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    openConfirm("האם אתה בטוח שברצונך לבטל את התור?", () => {
+                        const apptId = appt.id;
+                        if (apptId) {
+                            db.collection("appointments")
+                                .doc(apptId)
+                                .delete()
+                                .then(() => {
+                                    appointments = appointments.filter((a) => a.id !== apptId);
+                                    renderAppointments();
+                                    showMessage("התור בוטל בהצלחה", "success");
+                                })
+                                .catch((error) => {
+                                    console.error("Error removing document: ", error);
+                                    showMessage("שגיאה בביטול התור", "error");
+                                });
+                        }
+                    });
+                };
+            }
+        }
+
+        return;
+    }
+
+    // תצוגת אדמין (טבלה מלאה)
+    if (userSingleAppointment) {
+        userSingleAppointment.classList.add("hidden");
+        userSingleAppointment.innerHTML = "";
+    }
+    appointmentsList.style.display = "table";
+
     if (visibleAppointments.length === 0) {
         if (noAppointments) noAppointments.style.display = "block";
         const tbodyEmpty = appointmentsList.tBodies && appointmentsList.tBodies[0];
@@ -486,32 +604,36 @@ function renderAppointments() {
         const actionsTd = document.createElement("td");
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
-        deleteBtn.textContent = "מחק";
+        deleteBtn.textContent = "ביטול";
         deleteBtn.className = "delete-btn";
         deleteBtn.addEventListener("click", () => {
-            // למשתמש רגיל נבקש אישור, אדמין מוחק מיד
-            if (!isAdmin) {
-                const ok = confirm("האם אתה בטוח שברצונך למחוק את התור?");
-                if (!ok) return;
-            }
-
             const apptId = appt.id;
-            if (apptId) {
-                db.collection("appointments")
-                    .doc(apptId)
-                    .delete()
-                    .then(() => {
-                        appointments = appointments.filter((a) => a.id !== apptId);
-                        renderAppointments();
-                        showMessage("התור נמחק בהצלחה", "success");
-                    })
-                    .catch((error) => {
-                        console.error("Error removing document: ", error);
-                        showMessage("שגיאה במחיקת התור", "error");
-                    });
+
+            const performCancel = () => {
+                if (apptId) {
+                    db.collection("appointments")
+                        .doc(apptId)
+                        .delete()
+                        .then(() => {
+                            appointments = appointments.filter((a) => a.id !== apptId);
+                            renderAppointments();
+                            showMessage("התור בוטל בהצלחה", "success");
+                        })
+                        .catch((error) => {
+                            console.error("Error removing document: ", error);
+                            showMessage("שגיאה בביטול התור", "error");
+                        });
+                } else {
+                    appointments = appointments.filter((_, i) => i !== index);
+                    renderAppointments();
+                }
+            };
+
+            // אדמין מבטל מיד, משתמש רגיל צריך אישור בדיאלוג
+            if (isAdmin) {
+                performCancel();
             } else {
-                appointments = appointments.filter((_, i) => i !== index);
-                renderAppointments();
+                openConfirm("האם אתה בטוח שברצונך לבטל את התור?", performCancel);
             }
         });
 
@@ -567,6 +689,15 @@ appointmentForm.addEventListener("submit", (event) => {
     if (!currentUser) {
         showMessage("חייבים להתחבר עם Google לפני קביעת תור", "error");
         return;
+    }
+
+    // הגבלה: לכל משתמש רגיל מותר רק תור אחד במערכת
+    if (!isAdmin) {
+        const userHasAppointment = appointments.some((a) => a.userId === currentUser.uid);
+        if (userHasAppointment) {
+            showMessage("יש לך כבר תור אחד במערכת. כדי לקבוע תור חדש, בטל קודם את התור הקיים.", "error");
+            return;
+        }
     }
 
     if (!validatePhone(phone)) {

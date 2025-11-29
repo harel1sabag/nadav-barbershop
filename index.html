@@ -69,10 +69,11 @@
                     <h2 id="appointments-title">התורים שלך</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         <button type="button" id="seed-demo-btn" class="secondary-btn hidden">צור תורי דמו</button>
-                        <button type="button" id="delete-all-btn" class="secondary-btn hidden">מחק את כל התורים</button>
+                        <button type="button" id="delete-all-btn" class="secondary-btn hidden">בטל את כל התורים</button>
                     </div>
                 </div>
                 <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
+                <div id="user-single-appointment" class="single-appointment-card hidden"></div>
                 <table id="appointments-list" class="appointments-table">
                     <thead>
                         <tr>
@@ -90,8 +91,19 @@
 
         <footer class="site-footer">
             <small>  <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
-            <small>© <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
+            <small> <span id="current-year"></span> מספרת נדב – כל הזכויות שמורות.</small>
         </footer>
+    </div>
+
+    <!-- Confirm dialog for delete actions -->
+    <div id="confirm-dialog" class="confirm-dialog hidden">
+        <div class="confirm-dialog-card">
+            <p id="confirm-message">האם אתה בטוח שברצונך לבטל את התור?</p>
+            <div class="confirm-actions">
+                <button id="confirm-cancel-btn" type="button" class="secondary-btn">לא</button>
+                <button id="confirm-ok-btn" type="button" class="primary-btn">כן</button>
+            </div>
+        </div>
     </div>
 
     <!-- Firebase SDKs - MUST load before app.js -->
