@@ -1,0 +1,19 @@
+{
+  "name": "nadav-barbershop",
+  "version": "1.0.0",
+  "description": "אתר לקביעת תורים למספרת נדב",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["barbershop", "appointments", "firebase"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
