@@ -53,16 +53,26 @@
                         <input type="hidden" id="selectedDate" name="date" />
                     </div>
                     <div class="form-row">
-                        <label for="time">שעה</label>
+                        <label for="time">שעה (כל תור חצי שעה)</label>
                         <div class="time-boxes" id="time-boxes"></div>
                         <input type="hidden" id="selectedTime" name="time" />
                     </div>
+                    <p id="no-times-message" class="muted-text hidden" style="margin-top: 0.25rem;">
+                        אין שעות עבודה פתוחות ליום שנבחר.
+                    </p>
+
                     <div class="form-actions">
                         <button type="submit" class="primary-btn">שמור תור</button>
                         <p id="form-message" class="form-message" aria-live="polite"></p>
                     </div>
                 </form>
             </section>
+
+            <p id="no-availability-message" class="muted-text hidden" style="margin-bottom: 1rem;">
+                אין שעות עבודה פתוחות בשבוע הקרוב.
+            </p>
+
+            <a href="admin-settings.html" id="admin-settings-link" class="secondary-btn hidden" style="margin-bottom: 0.75rem; display: inline-block;">הגדרת שעות עבודה</a>
 
             <section class="appointments-list-section">
                 <div class="appointments-header">
@@ -72,36 +82,50 @@
                         <button type="button" id="delete-all-btn" class="secondary-btn hidden">בטל את כל התורים</button>
                     </div>
                 </div>
-                <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
-                <div id="user-single-appointment" class="single-appointment-card hidden"></div>
-                <div id="user-history" class="history-card hidden"></div>
-                <table id="appointments-list" class="appointments-table">
-                    <thead>
-                        <tr>
-                            <th>שם</th>
-                            <th>תאריך</th>
-                            <th>שעה</th>
-                            <th>טלפון</th>
-                            <th>פעולות</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="appointments-body">
+                    <div class="appointments-main">
+                        <p id="no-appointments" class="muted-text">עדיין לא נקבעו תורים.</p>
+                        <div id="user-single-appointment" class="single-appointment-card hidden"></div>
+                        <div id="user-history" class="history-card hidden"></div>
+                        <table id="appointments-list" class="appointments-table">
+                            <thead>
+                                <tr>
+                                    <th>שם</th>
+                                    <th>תאריך</th>
+                                    <th>שעה</th>
+                                    <th>טלפון</th>
+                                    <th>פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
 
-                <!-- טבלה נפרדת לתורים שבוצעו (מיועדת לאדמין) -->
-                <h3 id="completed-appointments-title" class="muted-text" style="margin-top: 1rem; display: none;">תורים שבוצעו</h3>
-                <table id="appointments-completed-list" class="appointments-table" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>שם</th>
-                            <th>תאריך</th>
-                            <th>שעה</th>
-                            <th>טלפון</th>
-                            <th>פעולות</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                        <!-- טבלה נפרדת לתורים שבוצעו (מיועדת לאדמין) -->
+                        <h3 id="completed-appointments-title" class="muted-text" style="margin-top: 1rem; display: none;">תורים שבוצעו</h3>
+                        <table id="appointments-completed-list" class="appointments-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>שם</th>
+                                    <th>תאריך</th>
+                                    <th>שעה</th>
+                                    <th>טלפון</th>
+                                    <th>פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div id="admin-work-settings" class="history-card hidden">
+                        <div class="history-title">הגדרות שעות וימי עבודה (אדמין)</div>
+                        <div class="form-row admin-work-legend">
+                            <span>לחץ על שעה כדי להדליק/לכבות אותה בכל יום. כל משבצת היא חצי שעה.</span>
+                        </div>
+                        <div class="form-row admin-work-grid-row">
+                            <div id="admin-work-grid" class="work-grid"></div>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
 

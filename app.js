@@ -18,6 +18,8 @@ const formMessage = document.getElementById("form-message");
 const appointmentsList = document.getElementById("appointments-list");
 const appointmentsCompletedList = document.getElementById("appointments-completed-list");
 const completedAppointmentsTitle = document.getElementById("completed-appointments-title");
+const adminWorkSettingsEl = document.getElementById("admin-work-settings");
+const adminWorkGridEl = document.getElementById("admin-work-grid");
 const noAppointments = document.getElementById("no-appointments");
 const currentYearSpan = document.getElementById("current-year");
 const authStatus = document.getElementById("auth-status");
@@ -32,16 +34,233 @@ const appointmentsTitle = document.getElementById("appointments-title");
 const newAppointmentSection = document.getElementById("new-appointment-section");
 const seedDemoBtn = document.getElementById("seed-demo-btn");
 const deleteAllBtn = document.getElementById("delete-all-btn");
+const adminSettingsLink = document.getElementById("admin-settings-link");
 const userSingleAppointment = document.getElementById("user-single-appointment");
 const userHistoryEl = document.getElementById("user-history");
 const confirmDialog = document.getElementById("confirm-dialog");
 const confirmMessageEl = document.getElementById("confirm-message");
 const confirmOkBtn = document.getElementById("confirm-ok-btn");
 const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
+const noAvailabilityMessage = document.getElementById("no-availability-message");
+const noTimesMessage = document.getElementById("no-times-message");
+const adminWorkCloseAllBtn = document.getElementById("admin-work-close-all");
+const adminWorkOpenAllBtn = document.getElementById("admin-work-open-all");
 
 // שנה נוכחית בפוטר
 if (currentYearSpan) {
     currentYearSpan.textContent = new Date().getFullYear();
+}
+
+// כפתורי "סגור הכל" / "פתח הכל" בעמוד הגדרות העבודה
+if (adminWorkCloseAllBtn) {
+    adminWorkCloseAllBtn.addEventListener("click", () => {
+        const baseSlots = buildTimeSlotsFromSettings();
+        workSettings.workSlots = {};
+        for (let d = 0; d < 7; d++) {
+            const key = String(d);
+            workSettings.workSlots[key] = [];
+            workSettings.workDays[d] = false;
+        }
+        renderWorkSettingsGrid();
+        saveWorkSettingsToFirestore(true).then(() => {
+            initializeDateSelection(true);
+        });
+    });
+}
+
+if (adminWorkOpenAllBtn) {
+    adminWorkOpenAllBtn.addEventListener("click", () => {
+        const baseSlots = buildTimeSlotsFromSettings();
+        workSettings.workSlots = {};
+        for (let d = 0; d < 7; d++) {
+            const key = String(d);
+            workSettings.workSlots[key] = baseSlots.slice();
+            workSettings.workDays[d] = true;
+        }
+        renderWorkSettingsGrid();
+        saveWorkSettingsToFirestore(true).then(() => {
+            initializeDateSelection(true);
+        });
+    });
+}
+
+// בניית טבלת השעות לאדמין (ימים × שעות)
+function renderWorkSettingsGrid() {
+    if (!adminWorkGridEl) return;
+
+    const baseSlots = buildTimeSlotsFromSettings();
+    if (!workSettings.workSlots || Object.keys(workSettings.workSlots).length === 0) {
+        workSettings.workSlots = {};
+        for (let d = 0; d < 7; d++) {
+            const key = String(d);
+            workSettings.workSlots[key] = baseSlots.slice();
+        }
+    }
+
+    const dayNames = [
+        "יום ראשון",
+        "יום שני",
+        "יום שלישי",
+        "יום רביעי",
+        "יום חמישי",
+        "יום שישי",
+        "יום שבת",
+    ];
+
+    const table = document.createElement("table");
+    table.className = "work-grid-table";
+
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+
+    // תא ריק בתחילת השורה עבור כפתור "כל השעה" בכל שורה
+    const emptyTh = document.createElement("th");
+    emptyTh.textContent = "";
+    headRow.appendChild(emptyTh);
+    dayNames.forEach((name, dayIndex) => {
+        const th = document.createElement("th");
+        th.textContent = name;
+
+        // לחיצה על שם היום – הדלקה/כיבוי של כל השעות ביום הזה
+        th.style.cursor = "pointer";
+        th.addEventListener("click", () => {
+            const key = String(dayIndex);
+            const currentSlots = workSettings.workSlots[key] || baseSlots;
+            const hasAny = currentSlots.length > 0;
+
+            // אם יש שעות פעילות – נכבה את כל היום, אחרת נדליק את כל המשבצות
+            workSettings.workSlots[key] = hasAny ? [] : baseSlots.slice();
+            workSettings.workDays[dayIndex] = !hasAny;
+
+            // בנייה מחדש של הגריד כדי לשקף את המצב החדש
+            renderWorkSettingsGrid();
+            // שמירה אוטומטית וריענון התאריכים/שעות למשתמשים
+            saveWorkSettingsToFirestore(false).then(() => {
+                initializeDateSelection();
+                initializeTimeSelection();
+            });
+        });
+
+        headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    const daySlotCounts = new Array(7).fill(0);
+
+    baseSlots.forEach((time) => {
+        const row = document.createElement("tr");
+
+        // תא שליטה לכל שורה – כיבוי/הדלקה של כל הימים בשעה הזו
+        const controlTd = document.createElement("td");
+        const controlBtn = document.createElement("button");
+        controlBtn.type = "button";
+        controlBtn.className = "secondary-btn";
+        controlBtn.textContent = time;
+        controlBtn.addEventListener("click", () => {
+            let anyOn = false;
+            for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+                const key = String(dayIndex);
+                const arr = workSettings.workSlots[key] || [];
+                if (arr.includes(time)) {
+                    anyOn = true;
+                    break;
+                }
+            }
+
+            // אם יש לפחות יום אחד פעיל בשעה הזו – נכבה בכל הימים, אחרת נדליק בכולם
+            for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+                const key = String(dayIndex);
+                let arr = workSettings.workSlots[key] || [];
+                if (anyOn) {
+                    arr = arr.filter((t) => t !== time);
+                } else {
+                    if (!arr.includes(time)) arr.push(time);
+                }
+                workSettings.workSlots[key] = arr;
+
+                const base = buildTimeSlotsFromSettings();
+                const slotsForDay = workSettings.workSlots[key] || base;
+                workSettings.workDays[dayIndex] = slotsForDay.length > 0;
+            }
+
+            renderWorkSettingsGrid();
+            saveWorkSettingsToFirestore(false).then(() => {
+                initializeDateSelection();
+                initializeTimeSelection();
+            });
+        });
+        controlTd.appendChild(controlBtn);
+        row.appendChild(controlTd);
+
+        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+            const key = String(dayIndex);
+            const allowedSlots = workSettings.workSlots[key] || baseSlots;
+            const isActive = allowedSlots.includes(time);
+
+            if (isActive) {
+                daySlotCounts[dayIndex] += 1;
+            }
+
+            const td = document.createElement("td");
+            const span = document.createElement("span");
+            span.textContent = time;
+            span.className = "work-slot " + (isActive ? "work-slot-active" : "work-slot-disabled");
+
+            span.addEventListener("click", () => {
+                const arr = workSettings.workSlots[key] || [];
+                const idx = arr.indexOf(time);
+                if (idx === -1) {
+                    arr.push(time);
+                } else {
+                    arr.splice(idx, 1);
+                }
+                workSettings.workSlots[key] = arr;
+
+                // לעדכן גם את workDays: יום פעיל אם יש בו לפחות שעה אחת פעילה
+                const base = buildTimeSlotsFromSettings();
+                const slotsForDay = workSettings.workSlots[key] || base;
+                workSettings.workDays[dayIndex] = slotsForDay.length > 0;
+
+                // רינדור מחדש של כל הגריד כדי לעדכן גם את שורת הסיכום
+                renderWorkSettingsGrid();
+
+                // שמירה אוטומטית של ההגדרות בכל שינוי
+                saveWorkSettingsToFirestore(false);
+            });
+
+            td.appendChild(span);
+            row.appendChild(td);
+        }
+
+        tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+
+    // שורת סיכום בתחתית הטבלה – כמה משבצות פעילות בכל יום
+    const tfoot = document.createElement("tfoot");
+    const summaryRow = document.createElement("tr");
+
+    const labelTd = document.createElement("td");
+    labelTd.textContent = "סה\"כ תורים";
+    labelTd.className = "work-grid-summary-label";
+    summaryRow.appendChild(labelTd);
+
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+        const td = document.createElement("td");
+        td.textContent = daySlotCounts[dayIndex];
+        td.className = "work-grid-summary-cell";
+        summaryRow.appendChild(td);
+    }
+
+    tfoot.appendChild(summaryRow);
+    table.appendChild(tfoot);
+
+    adminWorkGridEl.innerHTML = "";
+    adminWorkGridEl.appendChild(table);
 }
 
 function startAvailabilityListener() {
@@ -61,6 +280,7 @@ function startAvailabilityListener() {
                     id: doc.id,
                     date: data.date,
                     time: data.time,
+                    status: data.status || null,
                 };
             });
 
@@ -191,8 +411,110 @@ let currentUser = null;
 let isAdmin = false;
 let appointmentsUnsubscribe = null;
 let availabilityUnsubscribe = null;
+let workSettingsUnsubscribe = null;
 let allAppointmentsForAvailability = [];
 let pendingConfirmAction = null;
+
+// הגדרות ברירת מחדל לימים ושעות עבודה (ניתן לעדכן ע"י אדמין)
+let workSettings = {
+    // workDays: מערך באורך 7 (0=ראשון ... 6=שבת)
+    workDays: [true, true, true, true, true, false, false],
+    // שעות בסיס (אותן שעות לכל הימים, חצאי שעה)
+    startTime: "15:00",
+    endTime: "20:00",
+    // workSlots: לכל יום רשימת שעות מותרות. אם חסר, כל השעות מותרות.
+    workSlots: {},
+};
+
+// מאזין בזמן אמת להגדרות ימי ושעות עבודה (מסמך settings/work)
+function startWorkSettingsListener() {
+    if (workSettingsUnsubscribe) {
+        workSettingsUnsubscribe();
+        workSettingsUnsubscribe = null;
+    }
+
+    const ref = db.collection("settings").doc("work");
+    const baseSlots = buildTimeSlotsFromSettings();
+
+    workSettingsUnsubscribe = ref.onSnapshot(
+        (doc) => {
+            if (doc.exists) {
+                const data = doc.data() || {};
+
+                if (typeof data.startTime === "string") {
+                    workSettings.startTime = data.startTime;
+                }
+                if (typeof data.endTime === "string") {
+                    workSettings.endTime = data.endTime;
+                }
+
+                // workSlots: לכל יום רשימת שעות מותרות. אם חסר – כל השעות מותרות.
+                if (data.workSlots && typeof data.workSlots === "object") {
+                    workSettings.workSlots = {};
+                    for (let d = 0; d < 7; d++) {
+                        const key = String(d);
+                        const arr = Array.isArray(data.workSlots[key])
+                            ? data.workSlots[key].filter((t) => baseSlots.includes(t))
+                            : baseSlots.slice();
+                        workSettings.workSlots[key] = arr;
+                    }
+                }
+
+                // workDays: אם קיים בשמירה – ניקח אותו, אחרת נגזור לפי workSlots
+                if (Array.isArray(data.workDays) && data.workDays.length === 7) {
+                    workSettings.workDays = data.workDays.map((v, i) => !!data.workDays[i]);
+                } else {
+                    const derivedDays = [];
+                    for (let d = 0; d < 7; d++) {
+                        const key = String(d);
+                        const slotsForDay = workSettings.workSlots[key] || baseSlots;
+                        derivedDays[d] = slotsForDay.length > 0;
+                    }
+                    workSettings.workDays = derivedDays;
+                }
+            } else {
+                // אין מסמך – ברירת מחדל: כל השעות מותרות לכל יום ראשון-חמישי
+                workSettings.workSlots = {};
+                for (let d = 0; d < 7; d++) {
+                    const key = String(d);
+                    workSettings.workSlots[key] = baseSlots.slice();
+                }
+            }
+
+            // עדכון הגריד בעמוד ההגדרות (אם קיים) ובחירת תאריכים/שעות בעמוד התורים
+            renderWorkSettingsGrid();
+            // שומרים את היום הנבחר אם עדיין מותר לפי ההגדרות
+            initializeDateSelection(true);
+
+            // כל שינוי בהגדרות – נוודא שההודעה הגלובלית תוסתר כברירת מחדל;
+            // אם אכן אין ימים זמינים, initializeDateSelection תציג אותה שוב.
+            if (noAvailabilityMessage) {
+                noAvailabilityMessage.classList.add("hidden");
+            }
+        },
+        (error) => {
+            console.error("Error listening to work settings:", error);
+        }
+    );
+}
+
+// שמירת workSettings ל-Firestore (משותפת לכפתור וללחיצה על משבצת)
+function saveWorkSettingsToFirestore(showMessages = true) {
+    const ref = db.collection("settings").doc("work");
+    return ref
+        .set(workSettings, { merge: true })
+        .then(() => {
+            if (showMessages) {
+                showMessage("הגדרות ימי ושעות העבודה נשמרו", "success");
+            }
+        })
+        .catch((error) => {
+            console.error("Error saving work settings:", error);
+            if (showMessages) {
+                showMessage("שגיאה בשמירת הגדרות ימי ושעות עבודה", "error");
+            }
+        });
+}
 
 function openConfirm(message, onConfirm) {
     if (!confirmDialog || !confirmMessageEl || !confirmOkBtn || !confirmCancelBtn) {
@@ -244,6 +566,22 @@ function getHebrewDayNameShort(index) {
     return days[index] || "";
 }
 
+// בניית משבצות זמן קבועות (חצאי שעות) בין 11:00 ל-20:00
+function buildTimeSlotsFromSettings() {
+    return [
+        "11:00", "11:30",
+        "12:00", "12:30",
+        "13:00", "13:30",
+        "14:00", "14:30",
+        "15:00", "15:30",
+        "16:00", "16:30",
+        "17:00", "17:30",
+        "18:00", "18:30",
+        "19:00", "19:30",
+        "20:00",
+    ];
+}
+
 function appointmentToDate(appt) {
     // appt.date בפורמט YYYY-MM-DD, appt.time בפורמט HH:MM
     const [yearStr, monthStr, dayStr] = appt.date.split("-");
@@ -278,7 +616,7 @@ function formatTimeDiff(fromDate, toDate) {
     return "לפני פחות משעה";
 }
 
-function initializeDateSelection() {
+function initializeDateSelection(keepCurrentSelected = false) {
     const container = document.getElementById("date-boxes");
     const hiddenInput = document.getElementById("selectedDate");
 
@@ -288,28 +626,35 @@ function initializeDateSelection() {
 
     const today = new Date();
 
-    for (let i = 0; i < 7; i++) {
+    // נשמור את התאריך הנוכחי אם רוצים לשמור בחירה קיימת
+    const previousSelected = keepCurrentSelected ? selectedDate : null;
+
+    // נציג עד 7 ימים קרובים שהם ימי עבודה לפי ההגדרות
+    let created = 0;
+    let offset = 0;
+    while (created < 7 && offset < 30) {
         const d = new Date(today);
-        d.setDate(today.getDate() + i);
+        d.setDate(today.getDate() + offset);
+
+        const dayIndex = d.getDay();
+        const isWorkDay = !!workSettings.workDays[dayIndex];
+        offset++;
+        if (!isWorkDay) {
+            continue;
+        }
 
         const iso = formatIsoDate(d);
         const displayFull = formatDisplayDate(iso);
-        const dayName = getHebrewDayNameShort(d.getDay());
+        const dayName = getHebrewDayNameShort(dayIndex);
 
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "date-box";
+        btn.dataset.date = iso;
         btn.innerHTML = `
             <div class="date-box-day">יום ${dayName}</div>
             <div class="date-box-date">${displayFull}</div>
         `;
-
-        if (i === 0) {
-            btn.classList.add("selected");
-            selectedDate = iso;
-            hiddenInput.value = iso;
-            initializeTimeSelection();
-        }
 
         btn.addEventListener("click", () => {
             selectedDate = iso;
@@ -325,6 +670,51 @@ function initializeDateSelection() {
         });
 
         container.appendChild(btn);
+        created++;
+    }
+
+    // אחרי שבנינו את כל הכפתורים – נחליט איזה יום מסומן
+    const allBoxes = container.querySelectorAll(".date-box");
+    if (allBoxes.length === 0) {
+        selectedDate = null;
+        hiddenInput.value = "";
+        initializeTimeSelection();
+
+        // אין כלל ימים זמינים בשבוע הקרוב – מסתירים את הטופס ומציגים הודעה
+        if (newAppointmentSection) {
+            newAppointmentSection.classList.add("hidden");
+        }
+        if (noAvailabilityMessage) {
+            noAvailabilityMessage.classList.remove("hidden");
+        }
+        return;
+    }
+
+    let targetIso = null;
+    if (previousSelected) {
+        const exists = Array.from(allBoxes).some((el) => el.dataset.date === previousSelected);
+        if (exists) {
+            targetIso = previousSelected;
+        }
+    }
+
+    if (!targetIso) {
+        targetIso = allBoxes[0].dataset.date;
+    }
+
+    selectedDate = targetIso;
+    hiddenInput.value = targetIso;
+    allBoxes.forEach((el) => {
+        el.classList.toggle("selected", el.dataset.date === targetIso);
+    });
+    initializeTimeSelection();
+
+    // יש לפחות יום אחד זמין – נוודא שהודעת "אין שעות עבודה פתוחות" מוסתרת
+    if (noAvailabilityMessage) {
+        noAvailabilityMessage.classList.add("hidden");
+    }
+    if (newAppointmentSection && !isAdmin) {
+        newAppointmentSection.classList.remove("hidden");
     }
 }
 
@@ -335,26 +725,45 @@ function initializeTimeSelection() {
     if (!container || !hiddenInput) return;
 
     container.innerHTML = "";
+    // איפוס בחירת שעה קודמת – המשתמש חייב לבחור שעה באופן מפורש
+    hiddenInput.value = "";
+    selectedTime = null;
 
-    const slots = [
-        "15:00", "15:30",
-        "16:00", "16:30",
-        "17:00", "17:30",
-        "18:00", "18:30",
-        "19:00", "19:30",
-        "20:00",
-    ];
+    const baseSlots = buildTimeSlotsFromSettings();
 
+    // סינון השעות לפי היום והתצורה שהגדיר האדמין
+    let slotsForDay = baseSlots;
+    if (selectedDate) {
+        const d = new Date(selectedDate);
+        const dayIndex = d.getDay();
+        const key = String(dayIndex);
+        if (workSettings.workSlots && Array.isArray(workSettings.workSlots[key])) {
+            const allowed = workSettings.workSlots[key];
+            slotsForDay = baseSlots.filter((t) => allowed.includes(t));
+        }
+    }
+
+    const slots = slotsForDay;
+
+    if (!slots || slots.length === 0) {
+        // אין שעות זמינות ליום שנבחר – מציגים הודעה ומסתירים משבצות
+        if (noTimesMessage) {
+            noTimesMessage.classList.remove("hidden");
+        }
+        return;
+    }
+
+    if (noTimesMessage) {
+        noTimesMessage.classList.add("hidden");
+    }
     const takenTimes = new Set(
         allAppointmentsForAvailability
-            .filter((a) => a.date === selectedDate)
+            .filter((a) => a.date === selectedDate && a.status !== "completed")
             .map((a) => a.time)
     );
 
     const now = new Date();
     const todayIso = formatIsoDate(now);
-
-    let hasSelectedDefault = false;
 
     slots.forEach((time) => {
         const btn = document.createElement("button");
@@ -378,13 +787,6 @@ function initializeTimeSelection() {
             btn.textContent = "תפוס";
         } else {
             btn.textContent = time;
-        }
-
-        if (!isTaken && !hasSelectedDefault) {
-            btn.classList.add("selected");
-            selectedTime = time;
-            hiddenInput.value = time;
-            hasSelectedDefault = true;
         }
 
         btn.addEventListener("click", () => {
@@ -424,6 +826,10 @@ function setAuthStatusText() {
 
         if (deleteAllBtn) {
             deleteAllBtn.classList.toggle("hidden", !isAdmin);
+        }
+
+        if (adminSettingsLink) {
+            adminSettingsLink.classList.toggle("hidden", !isAdmin);
         }
 
         if (userNameEl) {
@@ -471,6 +877,9 @@ function setAuthStatusText() {
         }
         if (deleteAllBtn) {
             deleteAllBtn.classList.add("hidden");
+        }
+        if (adminSettingsLink) {
+            adminSettingsLink.classList.add("hidden");
         }
     }
 }
@@ -885,7 +1294,8 @@ function validatePhone(value) {
     return digits.startsWith("05") && digits.length >= 9;
 }
 
-appointmentForm.addEventListener("submit", (event) => {
+if (appointmentForm) {
+    appointmentForm.addEventListener("submit", (event) => {
     event.preventDefault();
 
     const fullName = document.getElementById("fullName").value.trim();
@@ -898,8 +1308,24 @@ appointmentForm.addEventListener("submit", (event) => {
         return;
     }
 
-    if (!fullName || !phone || !date || !time) {
-        showMessage("יש למלא את כל השדות החובה", "error");
+    // ולידציה מפורטת לכל שדה
+    if (!fullName) {
+        showMessage("יש למלא שם מלא", "error");
+        return;
+    }
+
+    if (!phone) {
+        showMessage("יש למלא מספר טלפון", "error");
+        return;
+    }
+
+    if (!date) {
+        showMessage("יש לבחור תאריך לתור", "error");
+        return;
+    }
+
+    if (!time) {
+        showMessage("יש לבחור שעה לתור", "error");
         return;
     }
 
@@ -954,7 +1380,8 @@ appointmentForm.addEventListener("submit", (event) => {
             console.error("Error saving appointment: ", error);
             showMessage("שגיאה בשמירת התור לשרת", "error");
         });
-});
+    });
+}
 
 if (googleSigninBtn) {
     googleSigninBtn.addEventListener("click", () => {
@@ -978,6 +1405,8 @@ auth.onAuthStateChanged((user) => {
     setAuthStatusText();
     if (currentUser) {
         saveUserToFirestore(currentUser);
+        // מאזינים בזמן אמת להגדרות ימי ושעות עבודה, ואז טוענים את התורים והזמינות
+        startWorkSettingsListener();
         loadAppointmentsFromFirestore();
         startAvailabilityListener();
     } else {
@@ -988,6 +1417,10 @@ auth.onAuthStateChanged((user) => {
         if (availabilityUnsubscribe) {
             availabilityUnsubscribe();
             availabilityUnsubscribe = null;
+        }
+        if (workSettingsUnsubscribe) {
+            workSettingsUnsubscribe();
+            workSettingsUnsubscribe = null;
         }
         appointments = [];
         renderAppointments();

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>הגדרות עבודה - מספרת נדב</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="main-content">
+        <header class="site-header">
+            <h1 class="site-title">מספרת נדב</h1>
+            <p class="site-subtitle">הגדרות ימי ושעות עבודה (אדמין)</p>
+        </header>
+
+        <main class="container">
+            <section class="appointments-list-section">
+                <div class="appointments-header">
+                    <h2>הגדרות עבודה</h2>
+                    <div style="display:flex; gap:0.5rem;">
+                        <a href="index.html" class="secondary-btn">חזרה לתורים</a>
+                    </div>
+                </div>
+
+                <div id="admin-work-settings" class="history-card">
+                    <div class="history-title">ימי ושעות עבודה</div>
+                    <div class="form-row admin-work-legend">
+                        <span>לחץ על שעה כדי להדליק/לכבות אותה בכל יום. לחיצה על שם היום מכבה/מדליקה את כל היום.</span>
+                    </div>
+                    <div class="form-row admin-work-actions">
+                        <button type="button" id="admin-work-close-all" class="secondary-btn">סגור הכל</button>
+                        <button type="button" id="admin-work-open-all" class="secondary-btn">פתח הכל</button>
+                    </div>
+                    <div class="form-row admin-work-grid-row">
+                        <div id="admin-work-grid" class="work-grid"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs - MUST load before app.js -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- Your app code -->
+    <script src="app.js"></script>
+</body>
+</html>
